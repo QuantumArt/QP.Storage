@@ -1,0 +1,56 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: qp-storage-deployment
+  namespace: qp-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: qp-storage
+  template:
+    metadata:
+      labels:
+        app: qp-storage
+    spec:
+      containers:
+      - image: spbdocker03:5000/qp/storage:||version||
+        name: qp-storage
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - mountPath: /app/wwwroot
+          name: library-volume
+        resources: 
+          limits:
+            memory: "128Mi"
+      volumes:
+      - name: library-volume
+        persistentVolumeClaim:
+          claimName: library-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qp-storage-service
+  namespace: qp-ns
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: qp-storage
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: qp-storage-ingress
+  namespace: qp-ns
+spec:
+  rules:
+  - host: storage.qp.dev.qsupport.ru
+    http:
+      paths:
+      - backend:
+          serviceName: qp-storage-service
+          servicePort: 80
