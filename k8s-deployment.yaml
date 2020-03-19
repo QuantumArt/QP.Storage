@@ -27,7 +27,7 @@ spec:
       volumes:
       - name: library-volume
         persistentVolumeClaim:
-          claimName: library-pvc
+          claimName: qp-library
 ---
 apiVersion: v1
 kind: Service
