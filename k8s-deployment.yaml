@@ -1,8 +1,8 @@
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: qp-storage-deployment
-  namespace: qp-ns
+  name: qp-storage
+  namespace: qp
 spec:
   replicas: 1
   selector:
@@ -32,8 +32,8 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: qp-storage-service
-  namespace: qp-ns
+  name: qp-storage
+  namespace: qp
 spec:
   ports:
   - port: 80
@@ -41,16 +41,16 @@ spec:
   selector:
     app: qp-storage
 ---
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1beta1
 kind: Ingress
 metadata:
-  name: qp-storage-ingress
-  namespace: qp-ns
+  name: qp-storage
+  namespace: qp
 spec:
   rules:
   - host: storage.qp.dev.qsupport.ru
     http:
       paths:
       - backend:
-          serviceName: qp-storage-service
+          serviceName: qp-storage
           servicePort: 80
