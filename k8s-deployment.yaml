@@ -14,7 +14,7 @@ spec:
         app: qp-storage
     spec:
       containers:
-      - image: spbdocker03:5000/qp/storage:||version||
+      - image: ||registry||/qp/storage:||version||
         name: qp-storage
         ports:
         - containerPort: 80
@@ -50,7 +50,7 @@ metadata:
   namespace: qp
 spec:
   rules:
-  - host: storage.qp.dev.qsupport.ru
+  - host: ||host||
     http:
       paths:
       - backend:
