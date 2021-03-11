@@ -27,15 +27,8 @@ namespace QP.Storage.WebApp
 
             if (context.Request.Path.StartsWithSegments(basePath, out PathString subPath))
             {
-                var fileInfo = _fileProvider.GetFileInfo(subPath.Value);
-                if (fileInfo.Exists)
-                {
-                    await context.Response.WriteAsync(fileInfo.Length.ToString());
-                }
-                else
-                {
-                    context.Response.StatusCode = 404;
-                }
+                var fileInfo = _fileProvider.GetFileInfo(subPath.Value); 
+                await context.Response.WriteAsync(fileInfo.Exists ? fileInfo.Length.ToString() : "0");
                 return;
             }
 
