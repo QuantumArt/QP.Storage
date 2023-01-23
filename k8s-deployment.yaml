@@ -14,7 +14,7 @@ spec:
         app: qp-storage
     spec:
       containers:
-      - image: ||registry||/qp/storage:||version||
+      - image: "||registry||/qp/storage:||version||"
         name: qp-storage
         ports:
         - containerPort: 80
@@ -41,7 +41,7 @@ spec:
   selector:
     app: qp-storage
 ---
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
@@ -50,9 +50,13 @@ metadata:
   namespace: qp
 spec:
   rules:
-  - host: ||host||
+  - host: "||host||"
     http:
       paths:
-      - backend:
-          serviceName: qp-storage
-          servicePort: 80
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: qp-storage
+            port:
+              number: 80            
