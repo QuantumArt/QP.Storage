@@ -14,7 +14,7 @@ spec:
         app: qp-storage
     spec:
       containers:
-      - image: "||registry||/qp/storage:||version||"
+      - image: "||registry||/qp8-cms/storage:||version||"
         name: qp-storage
         ports:
         - containerPort: 80
