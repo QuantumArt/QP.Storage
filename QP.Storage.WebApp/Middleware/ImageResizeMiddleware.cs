@@ -64,7 +64,7 @@ public class ImageResizeMiddleware
 
                     if (ratio.HasValue && ratio > 0)
                     {
-                        var resizedImagePath = Path.Combine(_rootFolder, pathImage);
+                        var resizedImagePath = Path.Combine(_rootFolder, pathImage.TrimStart('\\'));
                         _imageImageProcessor.ResizeImage(originalFileInfo.PhysicalPath, ratio.Value,
                             resizedImagePath);
                         
