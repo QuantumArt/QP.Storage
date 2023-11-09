@@ -1,13 +1,10 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using QP.Storage.WebApp.Middleware;
+using QP.Storage.WebApp.Settings;
 
 namespace QP.Storage.WebApp
 {
@@ -25,6 +22,9 @@ namespace QP.Storage.WebApp
         public void ConfigureServices(IServiceCollection services)
         {
             services.Configure<FileSizeEndpointSettings>(Configuration.GetSection("FileSizeEndpointSettings"));
+            services.Configure<ImageResizeSettings>(Configuration.GetSection("ImageResizeSettings"));
+
+            services.AddTransient<ImageProcessor>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -34,8 +34,10 @@ namespace QP.Storage.WebApp
             {
                 app.UseDeveloperExceptionPage();
             }
-
+            
             app.UseMiddleware<FileSizeMiddleware>();
+            app.UseMiddleware<ReduceSettingsMiddleware>();
+            app.UseMiddleware<ImageResizeMiddleware>();
 
             app.UseStaticFiles();
         }

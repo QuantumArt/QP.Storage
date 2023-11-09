@@ -1,4 +1,4 @@
-﻿namespace QP.Storage.WebApp
+﻿namespace QP.Storage.WebApp.Settings
 {
     public class FileSizeEndpointSettings
     {
