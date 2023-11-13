@@ -38,7 +38,6 @@ public class ImageResizeMiddleware
             var name = Path.GetFileNameWithoutExtension(original);
             var extension = Path.GetExtension(original);
 
-            string resultPath;
             if (!string.IsNullOrEmpty(extension) &&
                 _settings.ExtensionsAllowedToResize.Contains(extension, StringComparer.InvariantCultureIgnoreCase))
             {
@@ -46,6 +45,7 @@ public class ImageResizeMiddleware
                 var pathImage = Path.Combine(segments, resizedImageName);
                 
                 var fileInfo = _fileProvider.GetFileInfo(pathImage);
+                string resultPath;
                 if (fileInfo.Exists)
                 {
                     resultPath = fileInfo.PhysicalPath;
@@ -62,9 +62,9 @@ public class ImageResizeMiddleware
                             w.Postfix.Equals(size, StringComparison.InvariantCultureIgnoreCase))
                         ?.ReduceRatio;
 
-                    if (ratio.HasValue && ratio > 0)
+                    if (ratio is > 0)
                     {
-                        var resizedImagePath = Path.Combine(_rootFolder, pathImage.TrimStart('\\'));
+                        var resizedImagePath = $"{_rootFolder}{pathImage}";
                         _imageImageProcessor.ResizeImage(originalFileInfo.PhysicalPath, ratio.Value,
                             resizedImagePath);
                         
@@ -75,7 +75,7 @@ public class ImageResizeMiddleware
                         resultPath = originalFileInfo.PhysicalPath;
                     }
 
-                    var result = File.ReadAllBytes(resultPath);
+                    var result = await File.ReadAllBytesAsync(resultPath);
                     await context.Response.BodyWriter.WriteAsync(result);
                     return;
                 }
