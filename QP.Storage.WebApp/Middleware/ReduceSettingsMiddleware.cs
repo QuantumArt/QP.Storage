@@ -24,7 +24,7 @@ public class ReduceSettingsMiddleware
             _settings.BasePath :
             $"/{_settings.BasePath}";
 
-        if (context.Request.Path.StartsWithSegments(basePath) && _settings.ReduceSizes.Length > 0)
+        if (context.Request.Path.StartsWithSegments(basePath) && _settings.ReduceSizes.Count > 0)
         {
             var serializeOptions = new JsonSerializerOptions
             {
