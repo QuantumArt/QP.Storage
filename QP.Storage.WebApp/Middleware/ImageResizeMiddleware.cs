@@ -31,8 +31,9 @@ public class ImageResizeMiddleware
 
     public async Task Invoke(HttpContext context)
     {
-        if (context.Request.Query.TryGetValue(_settings.WidthParameter, out var width)
-            | context.Request.Query.TryGetValue(_settings.SearchParameter, out var size))
+        if ((context.Request.Query.TryGetValue(_settings.WidthParameter, out var width)
+             | context.Request.Query.TryGetValue(_settings.SearchParameter, out var size))
+            && _settings.IsResizeAllowed)
         {
             var original = context.Request.Path.Value;
             var segments = Path.GetDirectoryName(original);
