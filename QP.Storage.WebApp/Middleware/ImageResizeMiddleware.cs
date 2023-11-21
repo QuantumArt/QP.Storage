@@ -19,18 +19,18 @@ public class ImageResizeMiddleware
     private readonly RequestDelegate _next;
     private readonly IFileProvider _fileProvider;
     private readonly ImageResizeSettings _settings;
-    private readonly ImageProcessor _imageImageProcessor;
+    private readonly ImageProcessor _imageProcessor;
     private readonly string _rootFolder;
     private readonly ILogger _logger = LogManager.GetCurrentClassLogger();
 
     public ImageResizeMiddleware(RequestDelegate next, IWebHostEnvironment hostingEnv,
-        IOptions<ImageResizeSettings> settings, ImageProcessor imageImageProcessor)
+        IOptions<ImageResizeSettings> settings, ImageProcessor imageProcessor)
     {
         _next = next;
         _fileProvider = hostingEnv.WebRootFileProvider;
         _rootFolder = hostingEnv.WebRootPath;
         _settings = settings.Value;
-        _imageImageProcessor = imageImageProcessor;
+        _imageProcessor = imageProcessor;
     }
 
     public async Task Invoke(HttpContext context)
@@ -93,7 +93,7 @@ public class ImageResizeMiddleware
         if (reduceSize.ReduceRatio > 0)
         {
             var resizedImagePath = $"{_rootFolder}{pathImage}";
-            _imageImageProcessor.ResizeImage(resultPath, reduceSize.ReduceRatio, resizedImagePath);
+            _imageProcessor.ResizeImage(resultPath, reduceSize.ReduceRatio, resizedImagePath);
             resultPath = resizedImagePath;
         }
 

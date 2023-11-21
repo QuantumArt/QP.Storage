@@ -24,8 +24,7 @@ namespace QP.Storage.WebApp
             services.AddLogging();
             services.Configure<FileSizeEndpointSettings>(Configuration.GetSection("FileSizeEndpointSettings"));
             services.Configure<ImageResizeSettings>(Configuration.GetSection("ImageResizeSettings"));
-
-            services.AddTransient<ImageProcessor>();
+            services.AddScoped<ImageProcessor>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
