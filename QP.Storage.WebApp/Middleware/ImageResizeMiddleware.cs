@@ -72,7 +72,7 @@ public class ImageResizeMiddleware
 
                     if (originalFileInfo.Exists)
                     {
-                        var resultPath = ResizeImage(originalFileInfo, reduceSize, pathImage);
+                        var resultPath = await ResizeImage(originalFileInfo, reduceSize, pathImage);
                         await WriteFileToResponse(context, resultPath);
                         return;
                     }
@@ -87,13 +87,13 @@ public class ImageResizeMiddleware
         await _next(context);
     }
 
-    private string ResizeImage(IFileInfo originalFileInfo, ReduceSize reduceSize, string pathImage)
+    private async Task<string> ResizeImage(IFileInfo originalFileInfo, ReduceSize reduceSize, string pathImage)
     {
         var resultPath = originalFileInfo.PhysicalPath;
         if (reduceSize.ReduceRatio > 0)
         {
             var resizedImagePath = $"{_rootFolder}{pathImage}";
-            _imageProcessor.ResizeImage(resultPath, reduceSize.ReduceRatio, resizedImagePath);
+            await _imageProcessor.ResizeImage(resultPath, reduceSize.ReduceRatio, resizedImagePath);
             resultPath = resizedImagePath;
         }
 
@@ -125,7 +125,7 @@ public class ImageResizeMiddleware
         {
             if (!string.IsNullOrWhiteSpace(width))
             {
-                if (decimal.TryParse(width, out var widthParsed) && originalFileInfo.Exists)
+                if (originalFileInfo.Exists && decimal.TryParse(width, out var widthParsed))
                 {
                     result = ChooseReduceSize(await GetRatio(originalFileInfo, widthParsed));
                 }
@@ -142,13 +142,8 @@ public class ImageResizeMiddleware
 
     private static async Task<decimal> GetRatio(IFileInfo originalFileInfo, decimal widthParsed)
     {
-        decimal ratio;
-        using (var image = await Image.LoadAsync(originalFileInfo.PhysicalPath))
-        {
-            ratio = image.Width / widthParsed;
-        }
-
-        return ratio;
+        using var image = await Image.LoadAsync(originalFileInfo.PhysicalPath);
+        return image.Width / widthParsed;
     }
 
     private ReduceSize ChooseReduceSize(decimal ratio)
