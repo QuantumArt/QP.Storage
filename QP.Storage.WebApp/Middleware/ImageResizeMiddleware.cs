@@ -94,6 +94,7 @@ public class ImageResizeMiddleware
         {
             var resizedImagePath = $"{_rootFolder}{pathImage}";
             await _imageProcessor.ResizeImage(resultPath, reduceSize.ReduceRatio, resizedImagePath);
+            _logger.Log(LogLevel.Info, $"Resizing image {resultPath} to {resizedImagePath} with ratio {reduceSize.ReduceRatio} completed.");
             resultPath = resizedImagePath;
         }
 
