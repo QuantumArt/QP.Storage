@@ -5,10 +5,12 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.FileProviders;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
+using NLog;
 using QP.Storage.WebApp.Settings;
 using SixLabors.ImageSharp;
+
 
 namespace QP.Storage.WebApp.Middleware;
 
@@ -18,117 +20,149 @@ public class ImageResizeMiddleware
     private readonly IFileProvider _fileProvider;
     private readonly ImageResizeSettings _settings;
     private readonly ImageProcessor _imageImageProcessor;
-    private ILogger<ReduceSettingsMiddleware> _logger;
     private readonly string _rootFolder;
+    private readonly ILogger _logger = LogManager.GetCurrentClassLogger();
 
     public ImageResizeMiddleware(RequestDelegate next, IWebHostEnvironment hostingEnv,
-        IOptions<ImageResizeSettings> settings, ImageProcessor imageImageProcessor, ILogger<ReduceSettingsMiddleware> logger)
+        IOptions<ImageResizeSettings> settings, ImageProcessor imageImageProcessor)
     {
         _next = next;
         _fileProvider = hostingEnv.WebRootFileProvider;
         _rootFolder = hostingEnv.WebRootPath;
         _settings = settings.Value;
         _imageImageProcessor = imageImageProcessor;
-        _logger = logger;
     }
 
     public async Task Invoke(HttpContext context)
     {
-        if ((context.Request.Query.TryGetValue(_settings.WidthParameter, out var width)
-             | context.Request.Query.TryGetValue(_settings.SearchParameter, out var size))
-            && _settings.IsResizeAllowed)
+        if (_settings.IsResizeAllowed &&
+            context.Request.Query.TryGetValue(_settings.WidthParameter, out var width) |
+            context.Request.Query.TryGetValue(_settings.SearchParameter, out var size))
         {
-
             try
             {
                 var original = context.Request.Path.Value;
-                var segments = Path.GetDirectoryName(original);
-                var name = Path.GetFileNameWithoutExtension(original);
-                var extension = Path.GetExtension(original);
                 var originalFileInfo = _fileProvider.GetFileInfo(original);
-
-                ReduceSize reduceSize = null;
-
-                if (!string.IsNullOrEmpty(width) && decimal.TryParse(width, out var w) && originalFileInfo.Exists)
-                {
-                    decimal ratio;
-                    using (var image = Image.Load(originalFileInfo.PhysicalPath))
-                    {
-                        ratio = image.Width / w;
-                    }
-
-                    decimal closestDiff = Math.Abs(ratio - 1);
-                    foreach (var rs in _settings.ReduceSizes)
-                    {
-                        var diff = Math.Abs(rs.ReduceRatio - ratio);
-                        if (diff < closestDiff)
-                        {
-                            reduceSize = rs;
-                        }
-                    }
-                }
-                else if (!string.IsNullOrEmpty(size))
-                {
-                    reduceSize = _settings.ReduceSizes.SingleOrDefault(w =>
-                        w.Postfix.Equals(size, StringComparison.InvariantCultureIgnoreCase));
-                }
-
+                var reduceSize = await GetReduceSize(width, originalFileInfo, size);
+                
                 if (reduceSize == null && originalFileInfo.Exists)
                 {
-                    var result = await File.ReadAllBytesAsync(originalFileInfo.PhysicalPath);
-                    await context.Response.BodyWriter.WriteAsync(result);
+                    await WriteFileToResponse(context, originalFileInfo.PhysicalPath);
                     return;
                 }
 
-                if (reduceSize != null)
+                var segments = Path.GetDirectoryName(original);
+                var extension = Path.GetExtension(original);
+                var extensions = _settings.ExtensionsAllowedToResize;
+
+                if (reduceSize != null && 
+                    !string.IsNullOrWhiteSpace(extension) &&
+                    extensions.Contains(extension, StringComparer.InvariantCultureIgnoreCase) &&
+                    segments != null)
                 {
-                    if (!string.IsNullOrEmpty(extension) &&
-                        _settings.ExtensionsAllowedToResize.Contains(extension,
-                            StringComparer.InvariantCultureIgnoreCase))
+                    var name = Path.GetFileNameWithoutExtension(original);
+                    var pathImage = GetExtractImagePath(name, reduceSize, extension, segments);
+                    var fileInfo = _fileProvider.GetFileInfo(pathImage);
+                    
+                    if (fileInfo is {Exists: true})
                     {
-                        var resizedImageName = string.Format(_settings.ResizedImageTemplate, name, reduceSize.Postfix,
-                            extension);
-                        var pathImage = Path.Combine(segments, resizedImageName);
+                        await WriteFileToResponse(context, fileInfo.PhysicalPath);
+                        return;
+                    }
 
-                        var fileInfo = _fileProvider.GetFileInfo(pathImage);
-                        string resultPath;
-                        if (fileInfo.Exists)
-                        {
-                            resultPath = fileInfo.PhysicalPath;
-
-                            var result = File.ReadAllBytes(resultPath);
-                            await context.Response.BodyWriter.WriteAsync(result);
-                            return;
-                        }
-
-                        if (originalFileInfo.Exists)
-                        {
-                            if (reduceSize.ReduceRatio > 0)
-                            {
-                                var resizedImagePath = $"{_rootFolder}{pathImage}";
-                                _imageImageProcessor.ResizeImage(originalFileInfo.PhysicalPath, reduceSize.ReduceRatio,
-                                    resizedImagePath);
-
-                                resultPath = resizedImagePath;
-                            }
-                            else
-                            {
-                                resultPath = originalFileInfo.PhysicalPath;
-                            }
-
-                            var result = await File.ReadAllBytesAsync(resultPath);
-                            await context.Response.BodyWriter.WriteAsync(result);
-                            return;
-                        }
+                    if (originalFileInfo.Exists)
+                    {
+                        var resultPath = ResizeImage(originalFileInfo, reduceSize, pathImage);
+                        await WriteFileToResponse(context, resultPath);
+                        return;
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex.Message);
+                _logger.Log(LogLevel.Error, ex);
             }
         }
 
         await _next(context);
+    }
+
+    private string ResizeImage(IFileInfo originalFileInfo, ReduceSize reduceSize, string pathImage)
+    {
+        var resultPath = originalFileInfo.PhysicalPath;
+        if (reduceSize.ReduceRatio > 0)
+        {
+            var resizedImagePath = $"{_rootFolder}{pathImage}";
+            _imageImageProcessor.ResizeImage(resultPath, reduceSize.ReduceRatio, resizedImagePath);
+            resultPath = resizedImagePath;
+        }
+
+        return resultPath;
+    }
+
+    private string GetExtractImagePath(string name, ReduceSize reduceSize, string extension, string segments)
+    {
+        var resizedImageName = string.Format(
+            _settings.ResizedImageTemplate,
+            name,
+            reduceSize.Postfix,
+            extension
+        );
+        var pathImage = Path.Combine(segments, resizedImageName);
+        return pathImage;
+    }
+
+    private static async Task WriteFileToResponse(HttpContext context, string resultPath)
+    {
+        var result = await File.ReadAllBytesAsync(resultPath);
+        await context.Response.BodyWriter.WriteAsync(result);
+    }
+
+    private async Task<ReduceSize> GetReduceSize(StringValues width, IFileInfo originalFileInfo, StringValues size)
+    {
+        ReduceSize result = null;
+        if (_settings.ReduceSizes != null)
+        {
+            if (!string.IsNullOrWhiteSpace(width))
+            {
+                if (decimal.TryParse(width, out var widthParsed) && originalFileInfo.Exists)
+                {
+                    result = ChooseReduceSize(await GetRatio(originalFileInfo, widthParsed));
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(size))
+            {
+                result = _settings.ReduceSizes.SingleOrDefault(
+                    w => w.Postfix.Equals(size, StringComparison.InvariantCultureIgnoreCase)
+                );
+            }
+        }
+        return result;
+    }
+
+    private static async Task<decimal> GetRatio(IFileInfo originalFileInfo, decimal widthParsed)
+    {
+        decimal ratio;
+        using (var image = await Image.LoadAsync(originalFileInfo.PhysicalPath))
+        {
+            ratio = image.Width / widthParsed;
+        }
+
+        return ratio;
+    }
+
+    private ReduceSize ChooseReduceSize(decimal ratio)
+    {
+        ReduceSize result = null;
+        var closestDiff = Math.Abs(ratio - 1);
+        foreach (var rs in _settings.ReduceSizes)
+        {
+            var diff = Math.Abs(rs.ReduceRatio - ratio);
+            if (diff < closestDiff)
+            {
+                result = rs;
+            }
+        }
+        return result;
     }
 }

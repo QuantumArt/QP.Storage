@@ -10,7 +10,6 @@ public class ReduceSettingsMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ImageResizeSettings _settings;
-   
 
     public ReduceSettingsMiddleware(RequestDelegate next, IOptions<ImageResizeSettings> settings)
     {

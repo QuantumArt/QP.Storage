@@ -8,7 +8,7 @@ public class ImageResizeSettings
     public string SearchParameter { get; set; }
     public bool IsResizeAllowed { get; set; }
     public string WidthParameter { get; set; }
-    public List<ReduceSize> ReduceSizes { get; set; }
+    public ReduceSize[] ReduceSizes { get; set; }
     public string[] ExtensionsAllowedToResize { get; set; }
     public string ResizedImageTemplate { get; set; }
 }
