@@ -16,6 +16,9 @@ spec:
       containers:
       - image: "||registry||/qp8-cms/storage:||version||"
         name: qp-storage
+        env:
+        - name: ImageResizeSettings__IsResizeAllowed
+          value: "||allow_resize||"
         ports:
         - containerPort: 80
         volumeMounts:
