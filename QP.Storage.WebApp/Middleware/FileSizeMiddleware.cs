@@ -1,10 +1,11 @@
-﻿using Microsoft.AspNetCore.Hosting;
+﻿using System.Threading.Tasks;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
-using System.Threading.Tasks;
+using QP.Storage.WebApp.Settings;
 
-namespace QP.Storage.WebApp
+namespace QP.Storage.WebApp.Middleware
 {
     public class FileSizeMiddleware
     {
