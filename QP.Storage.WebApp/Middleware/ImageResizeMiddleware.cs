@@ -64,7 +64,7 @@ public class ImageResizeMiddleware
                     var pathImage = GetExtractImagePath(name, reduceSize, extension, segments);
                     var fileInfo = _fileProvider.GetFileInfo(pathImage);
                     
-                    if (fileInfo is {Exists: true})
+                    if (fileInfo is {Exists: true, Length: > 0})
                     {
                         await WriteFileToResponse(context, fileInfo.PhysicalPath);
                         return;
